@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chatbot-config
+  namespace: chatbot
+data:
+  # 数据库连接（集群内中间件）
+  CHATBOT_DB_HOST: "mysql.middleware.svc"
+  CHATBOT_DB_PORT: "3306"
+  CHATBOT_DB_NAME: "chatbot"
+  # LLM 提供方: mock(内置演示) | openai(OpenAI 兼容接口)
+  CHATBOT_LLM_PROVIDER: "mock"
+  CHATBOT_LLM_BASE_URL: "https://ark.cn-beijing.volces.com/api/v3"
+  CHATBOT_LLM_TEMPERATURE: "0.8"
+  CHATBOT_LLM_MAX_TOKENS: "1024"
+  CHATBOT_HISTORY_MAX: "20"

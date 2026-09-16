@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: chatbot
+  datasource:
+    url: jdbc:mysql://${CHATBOT_DB_HOST:mysql.middleware.svc}:${CHATBOT_DB_PORT:3306}/${CHATBOT_DB_NAME:chatbot}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${CHATBOT_DB_USER:appuser}
+    password: ${CHATBOT_DB_PASS:app-pass-2026}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 10000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+  shutdown: graceful
+
+chatbot:
+  app-version: ${APP_VERSION:1.0.0}
+  llm:
+    # 可选: mock(内置演示回复) | openai(OpenAI 兼容接口，如豆包方舟/DeepSeek/OpenAI)
+    provider: ${CHATBOT_LLM_PROVIDER:mock}
+    base-url: ${CHATBOT_LLM_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+    api-key: ${CHATBOT_LLM_API_KEY:}
+    model: ${CHATBOT_LLM_MODEL:}
+    temperature: ${CHATBOT_LLM_TEMPERATURE:0.8}
+    max-tokens: ${CHATBOT_LLM_MAX_TOKENS:1024}
+    timeout-seconds: ${CHATBOT_LLM_TIMEOUT:30}
+  history:
+    # 发送给 LLM 的历史消息条数上限
+    max-history: ${CHATBOT_HISTORY_MAX:20}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

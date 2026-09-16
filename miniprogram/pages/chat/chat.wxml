@@ -1,0 +1,48 @@
+<view class="chat-page">
+  <scroll-view class="msg-list" scroll-y scroll-into-view="{{scrollTo}}" scroll-with-animation>
+    <view id="msg-top" class="chat-head">
+      <image class="head-avatar" src="/images/avatars/{{avatar}}" mode="aspectFill"></image>
+      <view class="head-info">
+        <view class="head-name">{{name}}</view>
+        <view class="head-era">{{dynasty}}{{title ? ' · ' + title : ''}}</view>
+      </view>
+      <view class="clear-btn" bindtap="onClear">清空</view>
+    </view>
+
+    <view
+      wx:for="{{messages}}"
+      wx:key="index"
+      id="msg-{{index}}"
+      class="row {{item.role === 'user' ? 'row-user' : 'row-assistant'}}"
+    >
+      <image wx:if="{{item.role !== 'user'}}" class="bubble-avatar" src="/images/avatars/{{avatar}}" mode="aspectFill"></image>
+      <view class="bubble-wrap">
+        <view class="bubble {{item.isError ? 'bubble-error' : ''}}">{{item.content}}</view>
+        <view class="time" wx:if="{{item.time}}">{{item.time}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{sending}}" class="row row-assistant">
+      <image class="bubble-avatar" src="/images/avatars/{{avatar}}" mode="aspectFill"></image>
+      <view class="bubble bubble-typing">
+        <view class="dot"></view><view class="dot"></view><view class="dot"></view>
+      </view>
+    </view>
+
+    <view id="msg-bottom"></view>
+  </scroll-view>
+
+  <view class="input-bar">
+    <input
+      class="input"
+      value="{{input}}"
+      placeholder="对{{name}}说点什么…"
+      placeholder-class="input-ph"
+      confirm-type="send"
+      bindinput="onInput"
+      bindconfirm="onSend"
+      disabled="{{sending}}"
+    />
+    <button class="btn-primary send-btn" bindtap="onSend" disabled="{{sending || !input}}">发送</button>
+  </view>
+</view>

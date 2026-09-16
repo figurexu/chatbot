@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/chat/chat"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#2F2A24",
+    "navigationBarTitleText": "史海对话",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F7F3E8",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

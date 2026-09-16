@@ -1,0 +1,22 @@
+/* 全局样式：水墨宣纸风 */
+page {
+  background-color: #F7F3E8;
+  color: #3A342C;
+  font-family: -apple-system, "PingFang SC", "Songti SC", "SimSun", serif;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background-color: #A03A2B;
+  color: #FDF9F0;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+}
+
+.btn-primary::after {
+  border: none;
+}

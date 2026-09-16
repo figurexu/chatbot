@@ -1,0 +1,114 @@
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-bottom: 40rpx;
+}
+
+.hero {
+  padding: 48rpx 32rpx 40rpx;
+  background: linear-gradient(160deg, #3A2E22 0%, #57452F 100%);
+  border-bottom-left-radius: 32rpx;
+  border-bottom-right-radius: 32rpx;
+}
+
+.hero-title {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #F7EFDD;
+  letter-spacing: 8rpx;
+}
+
+.hero-sub {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #D8C9A8;
+  letter-spacing: 2rpx;
+}
+
+.section-title {
+  padding: 32rpx 12rpx 16rpx;
+  font-size: 28rpx;
+  color: #7A6A52;
+  letter-spacing: 2rpx;
+}
+
+.tip {
+  padding: 60rpx 0;
+  text-align: center;
+  color: #9A8C74;
+  font-size: 28rpx;
+}
+
+.tip.error {
+  color: #A03A2B;
+  padding: 60rpx 40rpx;
+  line-height: 1.7;
+}
+
+.grid {
+  padding: 0 24rpx;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  background: #FDFAF3;
+  border: 1rpx solid #E8DFC8;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(60, 45, 25, 0.05);
+}
+
+.card:active {
+  background: #F5EFDF;
+}
+
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  border: 3rpx solid #D8C9A8;
+  flex-shrink: 0;
+  background: #EFE6D0;
+}
+
+.card-body {
+  flex: 1;
+  margin-left: 24rpx;
+  min-width: 0;
+}
+
+.card-name {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #33281C;
+}
+
+.card-era {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: #A03A2B;
+}
+
+.card-tagline {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #7A6A52;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  color: #C8B893;
+  font-size: 44rpx;
+  margin-left: 12rpx;
+}
+
+.footer {
+  margin-top: 40rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #B5A888;
+}
