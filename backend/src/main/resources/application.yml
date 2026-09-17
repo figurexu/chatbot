@@ -55,6 +55,9 @@ chatbot:
     public-base-url: ${CHATBOT_VOICE_PUBLIC_BASE_URL:}
     # 录音临时文件目录
     audio-dir: ${CHATBOT_VOICE_AUDIO_DIR:/data/audio}
+    # 流式语音识别 2.0（边说边识别，WebSocket 中继；需控制台开通后可用）
+    stream-resource-id: ${CHATBOT_VOICE_STREAM_RESOURCE_ID:volc.seedasr.sauc.duration}
+    stream-endpoint: ${CHATBOT_VOICE_STREAM_ENDPOINT:wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async}
 
 management:
   endpoints:

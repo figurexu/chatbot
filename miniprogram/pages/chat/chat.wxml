@@ -64,8 +64,8 @@
   <view wx:if="{{recording}}" class="rec-overlay">
     <view class="rec-panel">
       <view class="rec-icon">🎙</view>
-      <view class="rec-text">{{recSlideCancel ? '松开手指，取消发送' : '正在聆听… 松开发送'}}</view>
-      <view class="rec-hint">（上滑取消）</view>
+      <view class="rec-text">{{recSlideCancel ? '松开手指，取消发送' : (recLiveText ? recLiveText : '正在聆听… 松开发送')}}</view>
+      <view class="rec-hint">{{recSlideCancel ? '' : (recLiveText ? '（继续说吧，上滑取消）' : '（上滑取消）')}}</view>
       <view class="rec-btns">
         <view class="rec-btn rec-btn-cancel" bindtap="onRecCancel">取消</view>
         <view class="rec-btn rec-btn-send" bindtap="onRecSendTap">完成</view>

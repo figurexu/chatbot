@@ -232,6 +232,11 @@
   margin-top: 24rpx;
   font-size: 30rpx;
   color: #F7EFDD;
+  max-height: 132rpx;
+  overflow: hidden;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.5;
 }
 
 .rec-hint {

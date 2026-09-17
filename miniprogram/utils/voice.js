@@ -114,10 +114,90 @@ function stopSpeak() {
   }
 }
 
+/* ============ 流式识别（边说边出字） ============ */
+
+let streamSocket = null
+let streamCbs = null
+
+const WS_OPEN = 1
+
+/**
+ * 建立流式识别连接。resolve 在连接建立、配置发送后触发。
+ * callbacks: { onPartial(text), onFinal(text), onError(msg) }
+ */
+function streamStart(callbacks) {
+  streamCbs = callbacks || {}
+  return new Promise((resolve, reject) => {
+    let sock
+    try {
+      sock = wx.connectSocket({
+        url: config.BASE_URL.replace(/^http/, 'ws') + '/api/voice/ws'
+      })
+    } catch (e) {
+      reject(e)
+      return
+    }
+    streamSocket = sock
+    sock.onOpen(() => {
+      sock.send({ data: JSON.stringify({ type: 'start' }) })
+      resolve()
+    })
+    sock.onMessage((res) => {
+      let data = null
+      try {
+        data = JSON.parse(res.data)
+      } catch (e) { /* ignore */ }
+      if (!data) return
+      if (data.type === 'result' && streamCbs.onPartial) {
+        streamCbs.onPartial(data.text)
+      } else if (data.type === 'done') {
+        if (streamCbs.onFinal) streamCbs.onFinal(data.text || '')
+      } else if (data.type === 'error') {
+        if (streamCbs.onError) streamCbs.onError(data.text || '识别服务异常')
+      }
+    })
+    sock.onError(() => {
+      if (streamCbs.onError) streamCbs.onError('流式识别连接失败')
+    })
+    sock.onClose(() => {
+      streamSocket = null
+    })
+  })
+}
+
+/** 发送一帧 PCM 音频（16k 单声道 16bit） */
+function streamSendFrame(buffer) {
+  if (streamSocket && streamSocket.readyState === WS_OPEN) {
+    streamSocket.send({ data: buffer })
+  }
+}
+
+/** 结束流式识别（等待最终结果） */
+function streamEnd() {
+  if (streamSocket && streamSocket.readyState === WS_OPEN) {
+    streamSocket.send({ data: JSON.stringify({ type: 'end' }) })
+  }
+}
+
+/** 取消流式识别并关闭连接 */
+function streamCancel() {
+  if (streamSocket && streamSocket.readyState === WS_OPEN) {
+    streamSocket.send({ data: JSON.stringify({ type: 'cancel' }) })
+  }
+  try {
+    if (streamSocket) streamSocket.close({})
+  } catch (e) { /* ignore */ }
+  streamSocket = null
+}
+
 module.exports = {
   isVoiceAvailable,
   getRecorder,
   recognize,
   speak,
-  stopSpeak
+  stopSpeak,
+  streamStart,
+  streamSendFrame,
+  streamEnd,
+  streamCancel
 }

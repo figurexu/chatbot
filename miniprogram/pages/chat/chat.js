@@ -19,7 +19,8 @@ Page({
     voiceReady: false,
     recording: false,
     recSlideCancel: false,
-    recognizing: false
+    recognizing: false,
+    recLiveText: ''
   },
 
   onLoad(options) {
@@ -130,9 +131,20 @@ Page({
       this._recording = true
       this.setData({ recording: true, recSlideCancel: false })
     })
+    // 流式识别：采集 PCM 帧实时发送（仅流式模式生效）
+    r.onFrameRecorded((res) => {
+      if (this._streaming && this._streamReady && res && res.frameBuffer) {
+        voice.streamSendFrame(res.frameBuffer)
+      }
+    })
     r.onStop((res) => {
       this._recording = false
-      this.setData({ recording: false, recSlideCancel: false })
+      if (this._streaming) {
+        // 流式模式：文本由 WebSocket 返回，保留浮层显示实时识别文字
+        this.setData({ recSlideCancel: false })
+        return
+      }
+      this.setData({ recording: false, recSlideCancel: false, recLiveText: '' })
       if (this.recCancelled) { this.recCancelled = false; return }
       if (!res || !res.tempFilePath) {
         wx.showToast({ title: '录音失败，请重试', icon: 'none' })
@@ -163,7 +175,8 @@ Page({
     })
     r.onError(() => {
       this._recording = false
-      this.setData({ recording: false, recSlideCancel: false })
+      this._streaming = false
+      this.setData({ recording: false, recSlideCancel: false, recLiveText: '' })
       this.recCancelled = false
       wx.showToast({ title: '录音出错，请重试', icon: 'none' })
     })
@@ -191,10 +204,10 @@ Page({
     this.recWillCancel = false
     wx.getSetting({
       success: (s) => {
-        if (s.authSetting['scope.record']) { this.startRecord(); return }
+        if (s.authSetting['scope.record']) { this.startRecImpl(); return }
         wx.authorize({
           scope: 'scope.record',
-          success: () => this.startRecord(),
+          success: () => this.startRecImpl(),
           fail: () => {
             wx.showModal({
               title: '需要麦克风权限',
@@ -205,6 +218,60 @@ Page({
           }
         })
       }
+    })
+  },
+
+  /** 按当前模式开始录音：流式优先，失败自动降级离线 */
+  startRecImpl() {
+    if (this._streamMode) this.startStreamRecord()
+    else this.startRecord()
+  },
+
+  /** 流式识别（边说边出字，松手出最终文本） */
+  startStreamRecord() {
+    const r = voice.getRecorder()
+    if (!r) return
+    this.recCancelled = false
+    this._streaming = true
+    this._streamReady = false
+    this.setData({ recording: true, recLiveText: '' })
+    voice.streamStart({
+      onPartial: (text) => {
+        if (this._streaming) this.setData({ recLiveText: text })
+      },
+      onFinal: (text) => {
+        this._streaming = false
+        this._streamReady = false
+        this.setData({ recording: false, recLiveText: '', recSlideCancel: false })
+        if (text && text.trim()) {
+          this.sendText(text.trim())
+        } else {
+          wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
+        }
+      },
+      onError: (msg) => {
+        this._streaming = false
+        this._streamReady = false
+        this.setData({ recording: false, recLiveText: '', recSlideCancel: false })
+        // 流式不可用 → 降级为离线识别
+        this._streamMode = false
+        wx.showToast({ title: (msg || '流式识别不可用') + '，本次未发送，请重试', icon: 'none' })
+      }
+    }).then(() => {
+      if (!this._streaming) { voice.streamCancel(); return }
+      this._streamReady = true
+      r.start({
+        duration: 60000,
+        format: 'mp3',
+        sampleRate: 16000,
+        encodeBitRate: 48000,
+        frameSize: 40
+      })
+    }).catch(() => {
+      this._streaming = false
+      this.setData({ recording: false, recLiveText: '' })
+      this._streamMode = false
+      wx.showToast({ title: '流式识别不可用，本次未发送，请重试', icon: 'none' })
     })
   },
 
@@ -220,9 +287,24 @@ Page({
     })
   },
 
-  /** 松开发送（上滑时转为取消） */
+  /** 松开发送（上滑时转为取消；流式模式发送结束指令） */
   onRecEnd() {
     const r = voice.getRecorder()
+    if (this._streaming) {
+      if (this.recWillCancel) {
+        this.recCancelled = true
+        voice.streamCancel()
+        this._streaming = false
+        this._streamReady = false
+        this.setData({ recording: false, recLiveText: '' })
+      } else {
+        voice.streamEnd()
+      }
+      // 停止麦克风采集（onFrameRecorded 停止，文本由 WS 返回）
+      if (r && this._recording) r.stop()
+      this._recording = false
+      return
+    }
     if (!this._recording) return
     if (this.recWillCancel) this.recCancelled = true
     this._recording = false
@@ -242,6 +324,16 @@ Page({
 
   /** 取消录音（系统 touchcancel 或浮层"取消"按钮） */
   onRecCancel() {
+    if (this._streaming) {
+      voice.streamCancel()
+      this._streaming = false
+      this._streamReady = false
+      this.setData({ recording: false, recLiveText: '', recSlideCancel: false })
+      const r = voice.getRecorder()
+      if (r && this._recording) r.stop()
+      this._recording = false
+      return
+    }
     this.recCancelled = true
     const r = voice.getRecorder()
     if (this._recording) {
@@ -253,9 +345,15 @@ Page({
     }
   },
 
-  /** 浮层"完成"按钮：停止录音并识别发送 */
+  /** 浮层"完成"按钮：停止录音并识别发送（流式模式发结束指令） */
   onRecSendTap() {
     const r = voice.getRecorder()
+    if (this._streaming) {
+      voice.streamEnd()
+      if (r && this._recording) r.stop()
+      this._recording = false
+      return
+    }
     if (this._recording) {
       this._recording = false
       r.stop()
