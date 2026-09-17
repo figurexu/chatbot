@@ -12,6 +12,7 @@ data:
   CHATBOT_LLM_PROVIDER: "openai"
   # 智谱 GLM-4-Flash（免费）OpenAI 兼容接口
   CHATBOT_LLM_BASE_URL: "https://open.bigmodel.cn/api/paas/v4"
+  CHATBOT_LLM_MODEL: "glm-4-flash"
   CHATBOT_LLM_TEMPERATURE: "0.8"
   CHATBOT_LLM_MAX_TOKENS: "1024"
   CHATBOT_HISTORY_MAX: "20"
