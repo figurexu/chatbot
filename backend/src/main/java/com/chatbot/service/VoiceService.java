@@ -255,19 +255,35 @@ public class VoiceService {
                 .retrieve()
                 .toEntity(String.class);
 
+        // 响应为 HTTP Chunked 多行 JSON（NDJSON）：每行一个对象，
+        // 音频行 {"code":0,"data":"<base64>"}，结束行 {"code":20000000,"message":"OK"}
+        String raw = resp.getBody() == null ? "" : resp.getBody();
+        if (raw.isBlank()) {
+            throw new VoiceException("语音合成结果为空");
+        }
         try {
-            JsonNode root = objectMapper.readTree(resp.getBody() == null ? "{}" : resp.getBody());
-            int code = root.path("code").asInt(-1);
-            if (code != 0) {
-                String msg = root.path("message").asText("");
-                log.warn("TTS failed: code={} msg={}", code, msg);
-                throw new VoiceException("语音合成失败: " + safeMessage(msg));
+            StringBuilder audioData = new StringBuilder();
+            String[] lines = raw.split("\\r?\\n");
+            for (String line : lines) {
+                if (line.isBlank()) {
+                    continue;
+                }
+                JsonNode node = objectMapper.readTree(line);
+                int code = node.path("code").asInt(-1);
+                String msg = node.path("message").asText("");
+                if (code != 0 && code != 20000000) {
+                    log.warn("TTS failed: code={} msg={}", code, msg);
+                    throw new VoiceException("语音合成失败: " + safeMessage(msg));
+                }
+                String data = node.path("data").asText("");
+                if (!data.isEmpty()) {
+                    audioData.append(data);
+                }
             }
-            String data = root.path("data").asText("");
-            if (data.isEmpty()) {
+            if (audioData.length() == 0) {
                 throw new VoiceException("语音合成结果为空");
             }
-            return Base64.getDecoder().decode(data);
+            return Base64.getDecoder().decode(audioData.toString());
         } catch (VoiceException e) {
             throw e;
         } catch (Exception e) {

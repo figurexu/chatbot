@@ -49,8 +49,8 @@ chatbot:
     # 语音合成 2.0（单向流式 HTTP）
     tts-resource-id: ${CHATBOT_VOICE_TTS_RESOURCE_ID:seed-tts-2.0}
     tts-endpoint: ${CHATBOT_VOICE_TTS_ENDPOINT:https://openspeech.bytedance.com/api/v3/tts/unidirectional}
-    # 播报音色（音色库 ID）
-    tts-speaker: ${CHATBOT_VOICE_TTS_SPEAKER:zh_male_walker_mars_bigtts}
+    # 播报音色（音色库 ID；当前用「高冷沉稳 2.0」，适合历史人物）
+    tts-speaker: ${CHATBOT_VOICE_TTS_SPEAKER:zh_male_gaolengchenwen_uranus_bigtts}
     # 录音文件对外暴露的 Base URL：默认取请求 Host（跟随隧道变化），也可显式指定
     public-base-url: ${CHATBOT_VOICE_PUBLIC_BASE_URL:}
     # 录音临时文件目录
