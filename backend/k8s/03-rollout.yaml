@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: chatbot
-        image: 192.168.5.61:5000/chatbot:0.1.7
+        image: 192.168.5.61:5000/chatbot:0.1.8
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -34,7 +34,7 @@ spec:
             name: chatbot-voice-secret
         env:
         - name: APP_VERSION
-          value: "0.1.7"
+          value: "0.1.8"
         resources:
           requests:
             cpu: 100m
@@ -62,6 +62,7 @@ spec:
       - setWeight: 50
       - pause: {}
       - setWeight: 100
+
 
 
 
