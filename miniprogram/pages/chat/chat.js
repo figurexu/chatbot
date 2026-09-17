@@ -151,7 +151,7 @@ Page({
   onRecStart() {
     if (this.data.recording || this.data.sending) return
     if (!this.data.voiceReady) {
-      wx.showToast({ title: '语音不可用：请先在公众平台添加「同声传译」插件', icon: 'none' })
+      wx.showToast({ title: '语音识别服务未配置，请先用文字输入', icon: 'none' })
       return
     }
     wx.getSetting({
