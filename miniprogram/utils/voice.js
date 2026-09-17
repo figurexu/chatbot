@@ -10,6 +10,10 @@ let recorder = null
 let audioCtx = null
 let ttsEndCb = null
 
+// TTS 结果缓存：同一文本二次播放直接复用已下载的临时文件，省一次网络往返
+const ttsCache = new Map()
+const TTS_CACHE_MAX = 30
+
 /** 语音能力是否可用（后端方案始终声明可用，实际失败以接口返回为准） */
 function isVoiceAvailable() {
   return true
@@ -59,6 +63,13 @@ function speak(text, onEnd) {
     return
   }
   ttsEndCb = onEnd
+
+  const cached = ttsCache.get(content)
+  if (cached) {
+    playFile(cached)
+    return
+  }
+
   wx.downloadFile({
     url: config.BASE_URL + '/api/voice/tts?text=' + encodeURIComponent(content),
     success: (res) => {
@@ -66,15 +77,24 @@ function speak(text, onEnd) {
         fireTtsEnd()
         return
       }
-      stopSpeak()
-      audioCtx = audioCtx || wx.createInnerAudioContext()
-      audioCtx.src = res.tempFilePath
-      audioCtx.onEnded(() => fireTtsEnd())
-      audioCtx.onError(() => fireTtsEnd())
-      audioCtx.play()
+      ttsCache.set(content, res.tempFilePath)
+      if (ttsCache.size > TTS_CACHE_MAX) {
+        const firstKey = ttsCache.keys().next().value
+        ttsCache.delete(firstKey)
+      }
+      playFile(res.tempFilePath)
     },
     fail: () => fireTtsEnd()
   })
+}
+
+function playFile(filePath) {
+  stopSpeak()
+  audioCtx = audioCtx || wx.createInnerAudioContext()
+  audioCtx.src = filePath
+  audioCtx.onEnded(() => fireTtsEnd())
+  audioCtx.onError(() => fireTtsEnd())
+  audioCtx.play()
 }
 
 function fireTtsEnd() {

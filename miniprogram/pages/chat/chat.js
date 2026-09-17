@@ -18,7 +18,8 @@ Page({
     voiceEnabled: true,
     voiceReady: false,
     recording: false,
-    recSlideCancel: false
+    recSlideCancel: false,
+    recognizing: false
   },
 
   onLoad(options) {
@@ -105,8 +106,8 @@ Page({
         sending: false,
         messages: [...this.data.messages, reply]
       }, () => this.scrollBottom())
-      // 语音播报回复
-      if (this.data.voiceEnabled) {
+      // 语音播报回复（若正在录音则跳过，避免新旧声音打架）
+      if (this.data.voiceEnabled && !this._recording) {
         voice.stopSpeak()
         voice.speak(res.reply)
       }
@@ -141,9 +142,23 @@ Page({
         wx.showToast({ title: '说话时间太短，请重试', icon: 'none' })
         return
       }
+      // 识别期间禁止再次录音/重复发送
+      this._busy = true
+      this.setData({ recognizing: true })
+      wx.showLoading({ title: '正在识别…', mask: true })
       voice.recognize(res.tempFilePath, {
-        onSuccess: (text) => this.sendText(text),
-        onError: (msg) => wx.showToast({ title: msg || '没听清，请再说一次', icon: 'none' })
+        onSuccess: (text) => {
+          this._busy = false
+          this.setData({ recognizing: false })
+          wx.hideLoading()
+          this.sendText(text)
+        },
+        onError: (msg) => {
+          this._busy = false
+          this.setData({ recognizing: false })
+          wx.hideLoading()
+          wx.showToast({ title: msg || '没听清，请再说一次', icon: 'none' })
+        }
       })
     })
     r.onError(() => {
@@ -162,10 +177,16 @@ Page({
 
   onRecStart(e) {
     if (this._recording || this.data.sending) return
+    if (this._busy) {
+      wx.showToast({ title: '正在识别上一条语音，请稍候', icon: 'none' })
+      return
+    }
     if (!this.data.voiceReady) {
       wx.showToast({ title: '语音识别服务未配置，请先用文字输入', icon: 'none' })
       return
     }
+    // 开始说话前打断正在播放的回复语音
+    voice.stopSpeak()
     this.recStartY = e.touches[0].clientY
     this.recWillCancel = false
     wx.getSetting({

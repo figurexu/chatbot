@@ -21,7 +21,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 语音能力（后端代理火山引擎豆包语音）：
@@ -58,7 +60,7 @@ public class VoiceService {
     @Value("${chatbot.voice.tts-endpoint:https://openspeech.bytedance.com/api/v3/tts/unidirectional}")
     private String ttsEndpoint;
 
-    @Value("${chatbot.voice.tts-speaker:zh_male_walker_mars_bigtts}")
+    @Value("${chatbot.voice.tts-speaker:zh_male_gaolengchenwen_uranus_bigtts}")
     private String ttsSpeaker;
 
     @Value("${chatbot.voice.public-base-url:}")
@@ -69,6 +71,12 @@ public class VoiceService {
 
     /** 语音合成单次最大字符数 */
     private static final int TTS_MAX_CHARS = 500;
+
+    /** TTS 结果缓存上限（条） */
+    private static final int TTS_CACHE_MAX = 50;
+
+    /** TTS 内存缓存：text -> mp3 字节，避免重复合成 */
+    private final Map<String, byte[]> ttsCache = new ConcurrentHashMap<>();
 
     public VoiceService(RestClient llmRestClient, ObjectMapper objectMapper) {
         this.restClient = llmRestClient;
@@ -237,6 +245,12 @@ public class VoiceService {
             content = content.substring(0, TTS_MAX_CHARS);
         }
 
+        // TTS 内存缓存：同一文本直接复用音频，减少往返延迟
+        byte[] cached = ttsCache.get(content);
+        if (cached != null) {
+            return cached;
+        }
+
         ObjectNode body = objectMapper.createObjectNode();
         ObjectNode params = body.putObject("req_params");
         params.put("text", content);
@@ -283,7 +297,14 @@ public class VoiceService {
             if (audioData.length() == 0) {
                 throw new VoiceException("语音合成结果为空");
             }
-            return Base64.getDecoder().decode(audioData.toString());
+            byte[] audio = Base64.getDecoder().decode(audioData.toString());
+            // 写入缓存（超上限时移除最早一条，简单 FIFO）
+            ttsCache.put(content, audio);
+            if (ttsCache.size() > TTS_CACHE_MAX) {
+                String firstKey = ttsCache.keySet().iterator().next();
+                ttsCache.remove(firstKey);
+            }
+            return audio;
         } catch (VoiceException e) {
             throw e;
         } catch (Exception e) {
