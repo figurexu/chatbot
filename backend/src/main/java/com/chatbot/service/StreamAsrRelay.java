@@ -63,6 +63,12 @@ public class StreamAsrRelay extends TextWebSocketHandler {
     /* ==================== 小程序侧（本服务作为 WS 服务端） ==================== */
 
     @Override
+    public void afterConnectionEstablished(WebSocketSession client) throws Exception {
+        log.info("小程序 WS 已连接: {}", client.getId());
+        super.afterConnectionEstablished(client);
+    }
+
+    @Override
     protected void handleTextMessage(WebSocketSession client, TextMessage message) throws Exception {
         JsonNode node;
         try {
@@ -72,6 +78,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             return;
         }
         String type = node.path("type").asText("");
+        log.info("收到指令 type={}", type);
         switch (type) {
             case "start" -> connectVolcano(client);
             case "end" -> {
@@ -156,6 +163,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         private final WebSocketSession client;
         private volatile WebSocketSession volcano;
         private volatile String lastText = "";
+        private volatile boolean finished = false;
 
         VolcanoLink(WebSocketSession client) {
             this.client = client;
@@ -228,14 +236,19 @@ public class StreamAsrRelay extends TextWebSocketHandler {
 
         @Override
         public void handleTransportError(WebSocketSession session, Throwable exception) {
-            log.warn("火山流式连接异常: {}", exception.getMessage());
+            log.warn("火山流式连接异常: {}", exception == null ? "unknown" : exception.getMessage());
             sendToClient(client, "error", "语音识别服务连接中断");
             links.remove(client);
         }
 
         @Override
         public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
-            log.info("火山流式连接关闭: {}", closeStatus);
+            log.info("火山流式连接关闭: code={} reason={}", closeStatus == null ? -1 : closeStatus.getCode(),
+                    closeStatus == null ? "" : closeStatus.getReason());
+            if (!finished) {
+                sendToClient(client, "error", "语音识别服务未开通或连接被关闭");
+            }
+            links.remove(client);
         }
 
         @Override
@@ -260,6 +273,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
                     sendToClient(client, "result", text);
                 }
                 if (root.path("is_last_package").asBoolean(false)) {
+                    finished = true;
                     sendToClient(client, "done", lastText);
                 }
             } catch (Exception e) {
