@@ -16,6 +16,7 @@ import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -85,7 +86,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleBinaryMessage(WebSocketSession client, BinaryMessage message) throws Exception {
+    protected void handleBinaryMessage(WebSocketSession client, BinaryMessage message) {
         VolcanoLink link = links.get(client);
         if (link == null) {
             return;
@@ -111,13 +112,13 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         }
         try {
             StandardWebSocketClient wsClient = new StandardWebSocketClient();
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
             headers.add("X-Api-Key", apiKey);
             headers.add("X-Api-Resource-Id", streamResourceId);
             headers.add("X-Api-Request-Id", UUID.randomUUID().toString());
             VolcanoLink link = new VolcanoLink(client);
             links.put(client, link);
-            wsClient.execute(link, URI.create(streamEndpoint), headers);
+            wsClient.execute(link, headers, URI.create(streamEndpoint));
         } catch (Exception e) {
             log.error("连接火山流式识别失败", e);
             links.remove(client);
