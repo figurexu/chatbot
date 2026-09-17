@@ -179,23 +179,26 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         private volatile WebSocketSession volcano;
         private volatile String lastText = "";
         private volatile boolean finished = false;
+        private volatile int audioCount = 0;
 
         VolcanoLink(WebSocketSession client) {
             this.client = client;
         }
 
         void sendAudio(byte[] payload) {
+            audioCount++;
             sendFrame(MSG_AUDIO, 0x0, payload);
         }
 
         void sendLastAudio() {
-            // 负包结束：flags=0b0011（header 后 4 字节为负 sequence），sequence=-1，payload 空
+            // 负包结束：flags=0b0011，sequence = -(已发包数+1)
+            // 服务端对无 sequence 的音频包自动分配 -1..-N，负包需接续为 -(N+1)
             WebSocketSession v = volcano;
             if (v == null || !v.isOpen()) {
                 return;
             }
             try {
-                v.sendMessage(new BinaryMessage(makeLastFrame()));
+                v.sendMessage(new BinaryMessage(makeLastFrame(-(audioCount + 1))));
             } catch (Exception e) {
                 log.warn("发送结束帧到火山失败", e);
             }
@@ -340,15 +343,15 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         return frame;
     }
 
-    /** 构造负包结束帧：Header(4) + Sequence(4)=-1 + Payload size(4)=0 */
-    static byte[] makeLastFrame() {
+    /** 构造负包结束帧：Header(4) + Sequence(4)=seq + Payload size(4)=0 */
+    static byte[] makeLastFrame(int seq) {
         byte[] frame = new byte[12];
         frame[0] = (byte) 0x11;
         frame[1] = (byte) ((MSG_AUDIO << 4) | 0x3); // flags=0b0011：后 4 字节为负 sequence
         frame[2] = (byte) 0x10;
         frame[3] = 0x00;
-        writeInt(frame, 4, -1);  // sequence = -1（最后一包）
-        writeInt(frame, 8, 0);   // payload size = 0
+        writeInt(frame, 4, seq);  // sequence（负数，最后一包）
+        writeInt(frame, 8, 0);    // payload size = 0
         return frame;
     }
 
