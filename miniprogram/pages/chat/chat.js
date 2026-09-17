@@ -17,7 +17,8 @@ Page({
     scrollTo: '',
     voiceEnabled: true,
     voiceReady: false,
-    recording: false
+    recording: false,
+    recSlideCancel: false
   },
 
   onLoad(options) {
@@ -124,12 +125,20 @@ Page({
     const r = voice.getRecorder()
     if (!r) return
     this.recBound = true
-    r.onStart(() => this.setData({ recording: true }))
+    r.onStart(() => {
+      this._recording = true
+      this.setData({ recording: true, recSlideCancel: false })
+    })
     r.onStop((res) => {
-      this.setData({ recording: false })
+      this._recording = false
+      this.setData({ recording: false, recSlideCancel: false })
       if (this.recCancelled) { this.recCancelled = false; return }
       if (!res || !res.tempFilePath) {
         wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+        return
+      }
+      if (res.duration && res.duration < 800) {
+        wx.showToast({ title: '说话时间太短，请重试', icon: 'none' })
         return
       }
       voice.recognize(res.tempFilePath, {
@@ -138,7 +147,8 @@ Page({
       })
     })
     r.onError(() => {
-      this.setData({ recording: false })
+      this._recording = false
+      this.setData({ recording: false, recSlideCancel: false })
       this.recCancelled = false
       wx.showToast({ title: '录音出错，请重试', icon: 'none' })
     })
@@ -150,12 +160,14 @@ Page({
     if (!on) voice.stopSpeak()
   },
 
-  onRecStart() {
-    if (this.data.recording || this.data.sending) return
+  onRecStart(e) {
+    if (this._recording || this.data.sending) return
     if (!this.data.voiceReady) {
       wx.showToast({ title: '语音识别服务未配置，请先用文字输入', icon: 'none' })
       return
     }
+    this.recStartY = e.touches[0].clientY
+    this.recWillCancel = false
     wx.getSetting({
       success: (s) => {
         if (s.authSetting['scope.record']) { this.startRecord(); return }
@@ -187,15 +199,48 @@ Page({
     })
   },
 
+  /** 松开发送（上滑时转为取消） */
   onRecEnd() {
     const r = voice.getRecorder()
-    if (r && this.data.recording) r.stop()
+    if (!this._recording) return
+    if (this.recWillCancel) this.recCancelled = true
+    this._recording = false
+    r.stop()
   },
 
+  /** 上滑取消手势：手指上移超过 60px 即进入"松开取消" */
+  onRecMove(e) {
+    if (!this._recording || !this.recStartY) return
+    const y = e.touches[0].clientY
+    const cancel = (this.recStartY - y) > 60
+    if (cancel !== this.recWillCancel) {
+      this.recWillCancel = cancel
+      this.setData({ recSlideCancel: cancel })
+    }
+  },
+
+  /** 取消录音（系统 touchcancel 或浮层"取消"按钮） */
   onRecCancel() {
     this.recCancelled = true
     const r = voice.getRecorder()
-    if (r && this.data.recording) r.stop()
+    if (this._recording) {
+      this._recording = false
+      r.stop()
+    } else {
+      // 未真正开始（如授权弹窗期间抬手），直接收起浮层
+      this.setData({ recording: false, recSlideCancel: false })
+    }
+  },
+
+  /** 浮层"完成"按钮：停止录音并识别发送 */
+  onRecSendTap() {
+    const r = voice.getRecorder()
+    if (this._recording) {
+      this._recording = false
+      r.stop()
+    } else {
+      this.setData({ recording: false, recSlideCancel: false })
+    }
   },
 
   onReplay(e) {

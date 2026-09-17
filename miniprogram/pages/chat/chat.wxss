@@ -213,8 +213,9 @@
 }
 
 .rec-panel {
-  width: 360rpx;
-  height: 360rpx;
+  width: 400rpx;
+  min-height: 360rpx;
+  padding: 48rpx 32rpx 40rpx;
   border-radius: 32rpx;
   background: rgba(47, 42, 36, 0.92);
   display: flex;
@@ -237,6 +238,33 @@
   margin-top: 10rpx;
   font-size: 22rpx;
   color: #B5A888;
+}
+
+.rec-btns {
+  display: flex;
+  margin-top: 36rpx;
+  width: 100%;
+  gap: 20rpx;
+}
+
+.rec-btn {
+  flex: 1;
+  height: 76rpx;
+  line-height: 76rpx;
+  border-radius: 38rpx;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.rec-btn-cancel {
+  background: rgba(255, 255, 255, 0.12);
+  color: #E8DFC8;
+  border: 1rpx solid rgba(255, 255, 255, 0.25);
+}
+
+.rec-btn-send {
+  background: #A03A2B;
+  color: #FFF;
 }
 
 .input {
