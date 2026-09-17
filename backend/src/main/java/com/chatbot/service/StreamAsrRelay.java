@@ -12,14 +12,13 @@ import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.WebSocketHttpHeaders;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
@@ -28,20 +27,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 流式语音识别中继：
- * 小程序 WebSocket → 本端点 → 火山引擎双向流式识别（/api/v3/sauc/bigmodel_async）。
- * 客户端协议（与小程序约定）：
- *   小程序→本服务：{"type":"start"|"end"|"cancel"} 文本帧；PCM 音频二进制帧
- *   本服务→小程序：{"type":"result","text":"..."} / {"type":"done","text":"..."} / {"type":"error","message":"..."}
+ * 小程序 WebSocket → 本端点 → 火山引擎大模型流式语音识别（/api/v3/sauc/bigmodel_async）。
+ *
+ * 火山 SAUC 二进制帧（大端）：
+ *   Header 4B：byte0=[protocol_version 4bit][header_size 4bit=0001]，byte1=[message_type 4bit][flags 4bit]，
+ *              byte2=[serialization 4bit][compression 4bit]，byte3=reserved
+ *   full client request / audio only request：Header(4) + Payload size(4) + Payload
+ *   full server response：Header(4) + Sequence(4) + Payload size(4) + Payload
+ *   error：Header(4) + Error code(4) + Error size(4) + Error message
+ *   message_type：0x1=full client request，0x2=audio only，0x9=full server response，0xF=error
+ *   audio 最后包 flags=0x2（不带 sequence，仅指示最后一包）；server 最终响应 flags=0x3
+ *
+ * 小程序侧协议：
+ *   小程序→本服务：{"type":"start"|"end"|"cancel"} 文本帧；PCM(16k/16bit/mono) 二进制帧
+ *   本服务→小程序：{"type":"result","text":...} / {"type":"done","text":...} / {"type":"error","message":...}
  */
 @Component
 public class StreamAsrRelay extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(StreamAsrRelay.class);
 
-    /** 火山 SAUC 帧头消息类型 */
-    private static final int MSG_FULL_REQUEST = 0x0;   // 全量 JSON 配置/响应
-    private static final int MSG_AUDIO = 0x1;          // 音频帧
-    private static final int MSG_FINAL = 0xF;          // 结束帧
+    /** 火山消息类型（header 高 4 位） */
+    private static final int MSG_FULL_REQUEST = 0x1;   // 全量配置
+    private static final int MSG_AUDIO = 0x2;          // 音频帧
+    private static final int MSG_SERVER_RESPONSE = 0x9; // 服务端识别结果
+    private static final int MSG_ERROR = 0xF;          // 服务端错误帧
+
+    /** flags：audio 最后一包；server 最终响应 */
+    private static final int FLAG_LAST_AUDIO = 0x2;
+    private static final int FLAG_FINAL_RESPONSE = 0x3;
 
     private final ObjectMapper objectMapper;
 
@@ -84,7 +98,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             case "end" -> {
                 VolcanoLink link = links.get(client);
                 if (link != null) {
-                    link.sendFrame(MSG_FINAL, new byte[0]);
+                    link.sendLastAudio();
                 }
             }
             case "cancel" -> closeVolcano(client);
@@ -100,7 +114,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         }
         byte[] data = message.getPayload().array();
         if (data.length > 0) {
-            link.sendFrame(MSG_AUDIO, data);
+            link.sendAudio(data);
         }
     }
 
@@ -123,6 +137,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             headers.add("X-Api-Key", apiKey);
             headers.add("X-Api-Resource-Id", streamResourceId);
             headers.add("X-Api-Request-Id", UUID.randomUUID().toString());
+            headers.add("X-Api-Connect-Id", UUID.randomUUID().toString());
             VolcanoLink link = new VolcanoLink(client);
             links.put(client, link);
             wsClient.execute(link, headers, URI.create(streamEndpoint));
@@ -156,7 +171,7 @@ public class StreamAsrRelay extends TextWebSocketHandler {
     }
 
     /**
-     * 与火山的单条连接。发送时按 SAUC 帧协议封装；接收时按"一消息一帧"解析。
+     * 与火山的单条连接。
      */
     private class VolcanoLink implements WebSocketHandler {
 
@@ -169,13 +184,21 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             this.client = client;
         }
 
-        void sendFrame(int msgType, byte[] payload) {
+        void sendAudio(byte[] payload) {
+            sendFrame(MSG_AUDIO, 0x0, payload);
+        }
+
+        void sendLastAudio() {
+            sendFrame(MSG_AUDIO, FLAG_LAST_AUDIO, new byte[0]);
+        }
+
+        void sendFrame(int msgType, int flags, byte[] payload) {
             WebSocketSession v = volcano;
             if (v == null || !v.isOpen()) {
                 return;
             }
             try {
-                v.sendMessage(new BinaryMessage(makeFrame(msgType, payload)));
+                v.sendMessage(new BinaryMessage(makeFrame(msgType, flags, payload)));
             } catch (Exception e) {
                 log.warn("发送音频到火山失败", e);
             }
@@ -210,8 +233,9 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             request.put("enable_itn", true);
             request.put("enable_punc", true);
             request.put("enable_ddc", true);
-            session.sendMessage(new BinaryMessage(makeFrame(MSG_FULL_REQUEST, payload.toString().getBytes(StandardCharsets.UTF_8))));
-            log.info("火山流式识别已连接");
+            session.sendMessage(new BinaryMessage(makeFrame(MSG_FULL_REQUEST, 0x0,
+                    payload.toString().getBytes(StandardCharsets.UTF_8))));
+            log.info("火山流式识别已连接，配置已发送");
         }
 
         @Override
@@ -220,17 +244,32 @@ public class StreamAsrRelay extends TextWebSocketHandler {
                 return;
             }
             byte[] data = bm.getPayload().array();
-            if (data.length < 21) {
+            if (data.length < 8) {
                 return;
             }
-            int headerSize = readInt(data, 1);
-            if (data.length < headerSize) {
-                return;
-            }
-            int msgType = readInt(data, 5);
-            byte[] payload = Arrays.copyOfRange(data, headerSize, data.length);
-            if (msgType == MSG_FULL_REQUEST) {
-                handleVolcanoJson(payload);
+            int msgType = (data[1] >> 4) & 0xF;
+            int flags = data[1] & 0xF;
+            if (msgType == MSG_SERVER_RESPONSE) {
+                // Header(4) + Sequence(4) + Payload size(4) + Payload
+                if (data.length < 12) {
+                    return;
+                }
+                int payloadSize = readInt(data, 8);
+                if (data.length < 12 + payloadSize) {
+                    return;
+                }
+                byte[] payload = Arrays.copyOfRange(data, 12, 12 + payloadSize);
+                handleVolcanoJson(payload, flags);
+            } else if (msgType == MSG_ERROR) {
+                // Header(4) + Error code(4) + Error size(4) + Error message
+                if (data.length < 12) {
+                    return;
+                }
+                int errSize = readInt(data, 8);
+                String errMsg = new String(Arrays.copyOfRange(data, 12,
+                        Math.min(data.length, 12 + errSize)), StandardCharsets.UTF_8);
+                log.warn("火山流式错误帧: code={} msg={}", readInt(data, 4), errMsg);
+                sendToClient(client, "error", "识别服务错误: " + errMsg);
             }
         }
 
@@ -256,23 +295,16 @@ public class StreamAsrRelay extends TextWebSocketHandler {
             return false;
         }
 
-        private void handleVolcanoJson(byte[] payload) {
+        private void handleVolcanoJson(byte[] payload, int flags) {
             try {
                 JsonNode root = objectMapper.readTree(payload);
-                int code = root.path("code").asInt(-1);
-                if (code != 0) {
-                    String msg = root.path("message").asText("识别失败");
-                    log.warn("火山流式返回错误: code={} msg={}", code, msg);
-                    sendToClient(client, "error", "识别失败: " + msg);
-                    return;
-                }
-                JsonNode result = root.path("payload_msg").path("result");
+                JsonNode result = root.path("result");
                 String text = result.path("text").asText("");
                 if (!text.isEmpty()) {
                     lastText = text;
                     sendToClient(client, "result", text);
                 }
-                if (root.path("is_last_package").asBoolean(false)) {
+                if (flags == FLAG_FINAL_RESPONSE) {
                     finished = true;
                     sendToClient(client, "done", lastText);
                 }
@@ -282,19 +314,19 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         }
     }
 
-    /* ==================== SAUC 帧协议 ==================== */
+    /* ==================== SAUC 帧编解码（大端） ==================== */
 
-    /** 构造火山 SAUC 帧：21 字节头 + payload */
-    static byte[] makeFrame(int msgType, byte[] payload) {
-        byte[] frame = new byte[21 + (payload == null ? 0 : payload.length)];
-        frame[0] = 0b0001; // protocol_version
-        writeInt(frame, 1, 21);      // header_size
-        writeInt(frame, 5, msgType); // message_type
-        writeInt(frame, 9, 0);       // message_type_specific_flags
-        writeInt(frame, 13, 0);      // serialization_method: JSON
-        writeInt(frame, 17, 0);      // message_compression: none
-        if (payload != null && payload.length > 0) {
-            System.arraycopy(payload, 0, frame, 21, payload.length);
+    /** 构造请求帧：Header(4) + Payload size(4) + Payload */
+    static byte[] makeFrame(int msgType, int flags, byte[] payload) {
+        byte[] body = payload == null ? new byte[0] : payload;
+        byte[] frame = new byte[8 + body.length];
+        frame[0] = (byte) 0x11;                 // protocol_version=0001, header_size=0001(→4字节)
+        frame[1] = (byte) ((msgType << 4) | (flags & 0xF));
+        frame[2] = (byte) 0x10;                 // serialization=0001(JSON), compression=0000(none)
+        frame[3] = 0x00;                        // reserved
+        writeInt(frame, 4, body.length);        // payload size
+        if (body.length > 0) {
+            System.arraycopy(body, 0, frame, 8, body.length);
         }
         return frame;
     }

@@ -265,7 +265,7 @@ Page({
         format: 'mp3',
         sampleRate: 16000,
         encodeBitRate: 48000,
-        frameSize: 40
+        frameSize: 10
       })
     }).catch(() => {
       this._streaming = false
