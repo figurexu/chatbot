@@ -1,0 +1,11 @@
+[Unit]
+Description=TCP relay 7898 -> 127.0.0.1:7897 (proxy for k3s pods)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/proxy-relay-7898.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
