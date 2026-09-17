@@ -1,4 +1,4 @@
-apiVersion: argoproj.io/v1alpha1
+﻿apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
   name: chatbot
@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: chatbot
-        image: 192.168.5.61:5000/chatbot:0.1.4
+        image: 192.168.5.61:5000/chatbot:0.1.5
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -27,15 +27,14 @@ spec:
             name: chatbot-config
         - secretRef:
             name: chatbot-secret
-        # LLM API Key 独立 Secret（本地手动创建，不纳入 Argo CD 管理）
-        - secretRef:
+        # LLM API Key 鐙珛 Secret锛堟湰鍦版墜鍔ㄥ垱寤猴紝涓嶇撼鍏?Argo CD 绠＄悊锛?        - secretRef:
             name: chatbot-llm-secret
-        # 语音（火山引擎豆包语音）API Key 独立 Secret（本地手动创建）
+        # 璇煶锛堢伀灞卞紩鎿庤眴鍖呰闊筹級API Key 鐙珛 Secret锛堟湰鍦版墜鍔ㄥ垱寤猴級
         - secretRef:
             name: chatbot-voice-secret
         env:
         - name: APP_VERSION
-          value: "0.1.4"
+          value: "0.1.5"
         resources:
           requests:
             cpu: 100m
@@ -63,3 +62,4 @@ spec:
       - setWeight: 50
       - pause: {}
       - setWeight: 100
+
