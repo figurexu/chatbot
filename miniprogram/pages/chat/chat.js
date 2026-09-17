@@ -121,25 +121,27 @@ Page({
 
   setupRecognizer() {
     if (this.recBound) return
-    const r = voice.getRecognizer()
+    const r = voice.getRecorder()
     if (!r) return
     this.recBound = true
-    r.onStart = () => this.setData({ recording: true })
-    r.onStop = (res) => {
+    r.onStart(() => this.setData({ recording: true }))
+    r.onStop((res) => {
       this.setData({ recording: false })
       if (this.recCancelled) { this.recCancelled = false; return }
-      const text = ((res && res.result) || '').trim()
-      if (text) {
-        this.sendText(text)
-      } else {
-        wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
+      if (!res || !res.tempFilePath) {
+        wx.showToast({ title: '录音失败，请重试', icon: 'none' })
+        return
       }
-    }
-    r.onError = () => {
+      voice.recognize(res.tempFilePath, {
+        onSuccess: (text) => this.sendText(text),
+        onError: (msg) => wx.showToast({ title: msg || '没听清，请再说一次', icon: 'none' })
+      })
+    })
+    r.onError(() => {
       this.setData({ recording: false })
       this.recCancelled = false
-      wx.showToast({ title: '语音识别失败', icon: 'none' })
-    }
+      wx.showToast({ title: '录音出错，请重试', icon: 'none' })
+    })
   },
 
   onVoiceToggle(e) {
@@ -174,20 +176,25 @@ Page({
   },
 
   startRecord() {
-    const r = voice.getRecognizer()
+    const r = voice.getRecorder()
     if (!r) return
     this.recCancelled = false
-    r.start({ duration: 60000, lang: 'zh_CN' })
+    r.start({
+      duration: 60000,
+      format: 'mp3',
+      sampleRate: 16000,
+      encodeBitRate: 48000
+    })
   },
 
   onRecEnd() {
-    const r = voice.getRecognizer()
+    const r = voice.getRecorder()
     if (r && this.data.recording) r.stop()
   },
 
   onRecCancel() {
     this.recCancelled = true
-    const r = voice.getRecognizer()
+    const r = voice.getRecorder()
     if (r && this.data.recording) r.stop()
   },
 

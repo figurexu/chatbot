@@ -1,6 +1,10 @@
 spring:
   application:
     name: chatbot
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 16MB
   datasource:
     url: jdbc:mysql://${CHATBOT_DB_HOST:mysql.middleware.svc}:${CHATBOT_DB_PORT:3306}/${CHATBOT_DB_NAME:chatbot}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: ${CHATBOT_DB_USER:appuser}
@@ -35,6 +39,22 @@ chatbot:
   history:
     # 发送给 LLM 的历史消息条数上限
     max-history: ${CHATBOT_HISTORY_MAX:20}
+  voice:
+    # 火山引擎豆包语音（新版控制台鉴权：x-api-key = API Key，无独立 token）
+    # 免费额度：录音文件识别 20 小时 / 语音合成 5000 字符
+    api-key: ${CHATBOT_VOICE_API_KEY:}
+    # 录音文件识别 2.0
+    asr-resource-id: ${CHATBOT_VOICE_ASR_RESOURCE_ID:volc.seedasr.auc}
+    asr-endpoint: ${CHATBOT_VOICE_ASR_ENDPOINT:https://openspeech.bytedance.com/api/v3/auc/bigmodel}
+    # 语音合成 2.0（单向流式 HTTP）
+    tts-resource-id: ${CHATBOT_VOICE_TTS_RESOURCE_ID:seed-tts-2.0}
+    tts-endpoint: ${CHATBOT_VOICE_TTS_ENDPOINT:https://openspeech.bytedance.com/api/v3/tts/unidirectional}
+    # 播报音色（音色库 ID）
+    tts-speaker: ${CHATBOT_VOICE_TTS_SPEAKER:zh_male_walker_mars_bigtts}
+    # 录音文件对外暴露的 Base URL：默认取请求 Host（跟随隧道变化），也可显式指定
+    public-base-url: ${CHATBOT_VOICE_PUBLIC_BASE_URL:}
+    # 录音临时文件目录
+    audio-dir: ${CHATBOT_VOICE_AUDIO_DIR:/data/audio}
 
 management:
   endpoints:

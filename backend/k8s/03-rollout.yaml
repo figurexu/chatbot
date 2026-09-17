@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: chatbot
-        image: 192.168.5.61:5000/chatbot:0.1.0
+        image: 192.168.5.61:5000/chatbot:0.1.1
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -30,9 +30,12 @@ spec:
         # LLM API Key 独立 Secret（本地手动创建，不纳入 Argo CD 管理）
         - secretRef:
             name: chatbot-llm-secret
+        # 语音（火山引擎豆包语音）API Key 独立 Secret（本地手动创建）
+        - secretRef:
+            name: chatbot-voice-secret
         env:
         - name: APP_VERSION
-          value: "0.1.0"
+          value: "0.1.1"
         resources:
           requests:
             cpu: 100m
