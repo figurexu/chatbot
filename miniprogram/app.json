@@ -10,6 +10,17 @@
     "backgroundColor": "#F7F3E8",
     "backgroundTextStyle": "dark"
   },
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  },
+  "permission": {
+    "scope.record": {
+      "desc": "用于语音向历史人物提问"
+    }
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }

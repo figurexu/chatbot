@@ -6,6 +6,10 @@
         <view class="head-name">{{name}}</view>
         <view class="head-era">{{dynasty}}{{title ? ' · ' + title : ''}}</view>
       </view>
+      <view class="voice-toggle">
+        <text class="voice-toggle-label">语音</text>
+        <switch checked="{{voiceEnabled}}" bindchange="onVoiceToggle" color="#A03A2B" style="transform: scale(0.7)" />
+      </view>
       <view class="clear-btn" bindtap="onClear">清空</view>
     </view>
 
@@ -18,7 +22,10 @@
       <image wx:if="{{item.role !== 'user'}}" class="bubble-avatar" src="/images/avatars/{{avatar}}" mode="aspectFill"></image>
       <view class="bubble-wrap">
         <view class="bubble {{item.isError ? 'bubble-error' : ''}}">{{item.content}}</view>
-        <view class="time" wx:if="{{item.time}}">{{item.time}}</view>
+        <view class="bubble-meta">
+          <view class="time" wx:if="{{item.time}}">{{item.time}}</view>
+          <view wx:if="{{item.role !== 'user' && voiceReady && voiceEnabled}}" class="replay-btn" data-content="{{item.content}}" bindtap="onReplay">🔊 播报</view>
+        </view>
       </view>
     </view>
 
@@ -33,6 +40,13 @@
   </scroll-view>
 
   <view class="input-bar">
+    <view
+      class="mic-btn {{recording ? 'mic-btn-active' : ''}}"
+      bindtouchstart="onRecStart"
+      bindtouchend="onRecEnd"
+      bindtouchcancel="onRecCancel"
+      hover-class="none"
+    >{{recording ? '◉' : '🎙'}}</view>
     <input
       class="input"
       value="{{input}}"
@@ -44,5 +58,13 @@
       disabled="{{sending}}"
     />
     <button class="btn-primary send-btn" bindtap="onSend" disabled="{{sending || !input}}">发送</button>
+  </view>
+
+  <view wx:if="{{recording}}" class="rec-overlay">
+    <view class="rec-panel">
+      <view class="rec-icon">🎙</view>
+      <view class="rec-text">正在聆听… 松开发送</view>
+      <view class="rec-hint">（上滑取消）</view>
+    </view>
   </view>
 </view>

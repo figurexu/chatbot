@@ -1,4 +1,5 @@
 const api = require('../../utils/api.js')
+const voice = require('../../utils/voice.js')
 
 Page({
   data: {
@@ -13,7 +14,10 @@ Page({
     input: '',
     sending: false,
     loaded: false,
-    scrollTo: ''
+    scrollTo: '',
+    voiceEnabled: true,
+    voiceReady: false,
+    recording: false
   },
 
   onLoad(options) {
@@ -22,10 +26,16 @@ Page({
       characterId,
       name: decodeURIComponent(options.name || ''),
       avatar: decodeURIComponent(options.avatar || ''),
-      sessionId: 's_' + characterId
+      sessionId: 's_' + characterId,
+      voiceReady: voice.isVoiceAvailable()
     })
     wx.setNavigationBarTitle({ title: '与' + this.data.name + '对话' })
+    this.setupRecognizer()
     this.init()
+  },
+
+  onUnload() {
+    voice.stopSpeak()
   },
 
   init() {
@@ -72,8 +82,14 @@ Page({
   onSend() {
     const text = (this.data.input || '').trim()
     if (!text || this.data.sending) return
+    this.setData({ input: '' })
+    this.sendText(text)
+  },
+
+  /** 统一发送入口（键盘输入 / 语音识别共用） */
+  sendText(text) {
+    if (!text || this.data.sending) return
     this.setData({
-      input: '',
       sending: true,
       messages: [...this.data.messages, { role: 'user', content: text, time: this.formatTime(Date.now()) }]
     }, () => this.scrollBottom())
@@ -83,10 +99,16 @@ Page({
       message: text,
       sessionId: this.data.sessionId
     }).then(res => {
+      const reply = { role: 'assistant', content: res.reply, time: this.formatTime(res.createdAt) }
       this.setData({
         sending: false,
-        messages: [...this.data.messages, { role: 'assistant', content: res.reply, time: this.formatTime(res.createdAt) }]
+        messages: [...this.data.messages, reply]
       }, () => this.scrollBottom())
+      // 语音播报回复
+      if (this.data.voiceEnabled) {
+        voice.stopSpeak()
+        voice.speak(res.reply)
+      }
     }).catch(err => {
       this.setData({
         sending: false,
@@ -95,7 +117,89 @@ Page({
     })
   },
 
+  /* ============ 语音 ============ */
+
+  setupRecognizer() {
+    if (this.recBound) return
+    const r = voice.getRecognizer()
+    if (!r) return
+    this.recBound = true
+    r.onStart = () => this.setData({ recording: true })
+    r.onStop = (res) => {
+      this.setData({ recording: false })
+      if (this.recCancelled) { this.recCancelled = false; return }
+      const text = ((res && res.result) || '').trim()
+      if (text) {
+        this.sendText(text)
+      } else {
+        wx.showToast({ title: '没听清，请再说一次', icon: 'none' })
+      }
+    }
+    r.onError = () => {
+      this.setData({ recording: false })
+      this.recCancelled = false
+      wx.showToast({ title: '语音识别失败', icon: 'none' })
+    }
+  },
+
+  onVoiceToggle(e) {
+    const on = e.detail.value
+    this.setData({ voiceEnabled: on })
+    if (!on) voice.stopSpeak()
+  },
+
+  onRecStart() {
+    if (this.data.recording || this.data.sending) return
+    if (!this.data.voiceReady) {
+      wx.showToast({ title: '语音不可用：请先在公众平台添加「同声传译」插件', icon: 'none' })
+      return
+    }
+    wx.getSetting({
+      success: (s) => {
+        if (s.authSetting['scope.record']) { this.startRecord(); return }
+        wx.authorize({
+          scope: 'scope.record',
+          success: () => this.startRecord(),
+          fail: () => {
+            wx.showModal({
+              title: '需要麦克风权限',
+              content: '请在设置中允许使用麦克风，才能语音提问',
+              confirmText: '去设置',
+              success: (r) => { if (r.confirm) wx.openSetting() }
+            })
+          }
+        })
+      }
+    })
+  },
+
+  startRecord() {
+    const r = voice.getRecognizer()
+    if (!r) return
+    this.recCancelled = false
+    r.start({ duration: 60000, lang: 'zh_CN' })
+  },
+
+  onRecEnd() {
+    const r = voice.getRecognizer()
+    if (r && this.data.recording) r.stop()
+  },
+
+  onRecCancel() {
+    this.recCancelled = true
+    const r = voice.getRecognizer()
+    if (r && this.data.recording) r.stop()
+  },
+
+  onReplay(e) {
+    const content = e.currentTarget.dataset.content
+    if (!content) return
+    voice.stopSpeak()
+    voice.speak(content)
+  },
+
   onClear() {
+    voice.stopSpeak()
     wx.showModal({
       title: '清空对话',
       content: '确定要清空与' + this.data.name + '的这段对话吗？',
