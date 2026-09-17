@@ -189,7 +189,16 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         }
 
         void sendLastAudio() {
-            sendFrame(MSG_AUDIO, FLAG_LAST_AUDIO, new byte[0]);
+            // 负包结束：flags=0b0011（header 后 4 字节为负 sequence），sequence=-1，payload 空
+            WebSocketSession v = volcano;
+            if (v == null || !v.isOpen()) {
+                return;
+            }
+            try {
+                v.sendMessage(new BinaryMessage(makeLastFrame()));
+            } catch (Exception e) {
+                log.warn("发送结束帧到火山失败", e);
+            }
         }
 
         void sendFrame(int msgType, int flags, byte[] payload) {
@@ -328,6 +337,18 @@ public class StreamAsrRelay extends TextWebSocketHandler {
         if (body.length > 0) {
             System.arraycopy(body, 0, frame, 8, body.length);
         }
+        return frame;
+    }
+
+    /** 构造负包结束帧：Header(4) + Sequence(4)=-1 + Payload size(4)=0 */
+    static byte[] makeLastFrame() {
+        byte[] frame = new byte[12];
+        frame[0] = (byte) 0x11;
+        frame[1] = (byte) ((MSG_AUDIO << 4) | 0x3); // flags=0b0011：后 4 字节为负 sequence
+        frame[2] = (byte) 0x10;
+        frame[3] = 0x00;
+        writeInt(frame, 4, -1);  // sequence = -1（最后一包）
+        writeInt(frame, 8, 0);   // payload size = 0
         return frame;
     }
 
