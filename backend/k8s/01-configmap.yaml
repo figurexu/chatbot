@@ -9,8 +9,9 @@ data:
   CHATBOT_DB_PORT: "3306"
   CHATBOT_DB_NAME: "chatbot"
   # LLM 提供方: mock(内置演示) | openai(OpenAI 兼容接口)
-  CHATBOT_LLM_PROVIDER: "mock"
-  CHATBOT_LLM_BASE_URL: "https://ark.cn-beijing.volces.com/api/v3"
+  CHATBOT_LLM_PROVIDER: "openai"
+  # 智谱 GLM-4-Flash（免费）OpenAI 兼容接口
+  CHATBOT_LLM_BASE_URL: "https://open.bigmodel.cn/api/paas/v4"
   CHATBOT_LLM_TEMPERATURE: "0.8"
   CHATBOT_LLM_MAX_TOKENS: "1024"
   CHATBOT_HISTORY_MAX: "20"
