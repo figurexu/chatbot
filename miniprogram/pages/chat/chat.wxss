@@ -204,7 +204,7 @@
   border-top: 1rpx solid var(--border);
 }
 
-/* 麦克风（纯 CSS 绘制） */
+/* 麦克风图标（lucide 风格 SVG） */
 .mic-btn {
   position: relative;
   width: 84rpx;
@@ -235,48 +235,21 @@
   50% { box-shadow: 0 0 0 14rpx rgba(239, 68, 68, 0.10); }
 }
 
-.mic-icon {
-  width: 28rpx;
-  height: 42rpx;
-  border-radius: 14rpx;
-  border: 5rpx solid var(--primary-foreground);
-  position: relative;
-}
-
-.mic-icon::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -20rpx;
-  width: 4rpx;
-  height: 18rpx;
-  transform: translateX(-50%);
-  background: var(--primary-foreground);
-  border-radius: 4rpx;
-}
-
-.mic-icon::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -24rpx;
-  width: 22rpx;
-  height: 14rpx;
-  transform: translateX(-50%);
-  border: 4rpx solid var(--primary-foreground);
-  border-top: none;
-  border-radius: 0 0 16rpx 16rpx;
+.mic-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .mic-dot {
   position: absolute;
-  top: 6rpx;
-  right: 6rpx;
-  width: 14rpx;
-  height: 14rpx;
+  top: 8rpx;
+  right: 8rpx;
+  width: 16rpx;
+  height: 16rpx;
   border-radius: 50%;
   background: #FFF;
-  border: 2rpx solid var(--destructive);
+  border: 3rpx solid var(--destructive);
+  box-sizing: border-box;
 }
 
 /* 输入框 */
@@ -349,37 +322,9 @@
   justify-content: center;
 }
 
-.rec-icon-mic {
-  width: 40rpx;
-  height: 60rpx;
-  border-radius: 20rpx;
-  border: 7rpx solid var(--foreground);
-  position: relative;
-}
-
-.rec-icon-mic::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -28rpx;
-  width: 6rpx;
-  height: 26rpx;
-  transform: translateX(-50%);
-  background: var(--foreground);
-  border-radius: 6rpx;
-}
-
-.rec-icon-mic::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -34rpx;
-  width: 32rpx;
-  height: 20rpx;
-  transform: translateX(-50%);
-  border: 6rpx solid var(--foreground);
-  border-top: none;
-  border-radius: 0 0 24rpx 24rpx;
+.rec-img {
+  width: 64rpx;
+  height: 64rpx;
 }
 
 .rec-text {

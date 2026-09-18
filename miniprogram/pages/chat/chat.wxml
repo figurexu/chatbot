@@ -1,5 +1,5 @@
 <view class="chat-page">
-  <scroll-view class="msg-list" scroll-y scroll-into-view="{{scrollTo}}" scroll-with-animation>
+  <scroll-view class="msg-list" scroll-y scroll-into-view="{{scrollTo}}" scroll-with-animation="{{scrollWithAnimation}}">
     <view id="msg-top" class="chat-head">
       <image class="head-avatar" src="/images/avatars/{{avatar}}" mode="aspectFill"></image>
       <view class="head-info">
@@ -50,7 +50,7 @@
       bindtouchcancel="onRecCancel"
       hover-class="none"
     >
-      <view class="mic-icon"></view>
+      <image class="mic-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIlMjNGQUZBRkEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI5IiB5PSIyIiB3aWR0aD0iNiIgaGVpZ2h0PSIxMiIgcng9IjMiLz48cGF0aCBkPSJNNSAxMHYxYTcgNyAwIDAgMCAxNCAwdi0xIi8+PGxpbmUgeDE9IjEyIiB4Mj0iMTIiIHkxPSIxOSIgeTI9IjIyIi8+PC9zdmc+" mode="aspectFit"></image>
       <view wx:if="{{recording}}" class="mic-dot"></view>
     </view>
     <input
@@ -68,7 +68,7 @@
 
   <view wx:if="{{recording}}" class="rec-overlay">
     <view class="rec-panel">
-      <view class="rec-icon"><view class="rec-icon-mic"></view></view>
+      <view class="rec-icon"><image class="rec-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIlMjMwOTA5MEIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSI5IiB5PSIyIiB3aWR0aD0iNiIgaGVpZ2h0PSIxMiIgcng9IjMiLz48cGF0aCBkPSJNNSAxMHYxYTcgNyAwIDAgMCAxNCAwdi0xIi8+PGxpbmUgeDE9IjEyIiB4Mj0iMTIiIHkxPSIxOSIgeTI9IjIyIi8+PC9zdmc+" mode="aspectFit"></image></view>
       <view class="rec-text">{{recSlideCancel ? '松开手指，取消发送' : (recLiveText ? recLiveText : '正在聆听…')}}</view>
       <view class="rec-hint">{{recSlideCancel ? '' : (recLiveText ? '继续说吧，上滑取消' : '上滑取消 · 松开发送')}}</view>
       <view class="rec-btns">

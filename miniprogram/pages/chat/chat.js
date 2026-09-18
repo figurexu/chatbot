@@ -15,6 +15,7 @@ Page({
     sending: false,
     loaded: false,
     scrollTo: '',
+    scrollWithAnimation: true,
     voiceEnabled: true,
     voiceReady: false,
     recording: false,
@@ -75,7 +76,11 @@ Page({
       messages.push({ role: 'assistant', content: this.data.greeting, time: '', isGreeting: true })
     }
     messages.push(...(this.history || []))
-    this.setData({ messages }, () => this.scrollBottom())
+    // 首次打开：关动画直接定位到底部，避免"从上往下快速滑动"的不跟手感；
+    // 定位完成后恢复动画，供后续新消息使用。
+    this.setData({ messages, scrollWithAnimation: false, scrollTo: 'msg-bottom' }, () => {
+      this.setData({ scrollWithAnimation: true })
+    })
   },
 
   onInput(e) {

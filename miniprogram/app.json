@@ -4,10 +4,10 @@
     "pages/chat/chat"
   ],
   "window": {
-    "navigationBarBackgroundColor": "#2F2A24",
-    "navigationBarTitleText": "史海对话",
-    "navigationBarTextStyle": "white",
-    "backgroundColor": "#F7F3E8",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "千古一席",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#FFFFFF",
     "backgroundTextStyle": "dark"
   },
   "permission": {
