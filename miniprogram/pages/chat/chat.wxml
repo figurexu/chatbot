@@ -6,11 +6,13 @@
         <view class="head-name">{{name}}</view>
         <view class="head-era">{{dynasty}}{{title ? ' · ' + title : ''}}</view>
       </view>
-      <view class="voice-toggle">
-        <text class="voice-toggle-label">语音</text>
-        <switch checked="{{voiceEnabled}}" bindchange="onVoiceToggle" color="#A03A2B" style="transform: scale(0.7)" />
+      <view class="head-actions">
+        <view class="voice-toggle">
+          <text class="voice-toggle-label">语音</text>
+          <switch checked="{{voiceEnabled}}" bindchange="onVoiceToggle" color="#18181B" style="transform: scale(0.68)" />
+        </view>
+        <view class="clear-btn" bindtap="onClear">清空</view>
       </view>
-      <view class="clear-btn" bindtap="onClear">清空</view>
     </view>
 
     <view
@@ -24,7 +26,7 @@
         <view class="bubble {{item.isError ? 'bubble-error' : ''}}">{{item.content}}</view>
         <view class="bubble-meta">
           <view class="time" wx:if="{{item.time}}">{{item.time}}</view>
-          <view wx:if="{{item.role !== 'user' && voiceReady && voiceEnabled}}" class="replay-btn" data-content="{{item.content}}" bindtap="onReplay">🔊 播报</view>
+          <view wx:if="{{item.role !== 'user' && voiceReady && voiceEnabled}}" class="replay-btn" data-content="{{item.content}}" bindtap="onReplay">播报</view>
         </view>
       </view>
     </view>
@@ -47,7 +49,10 @@
       bindtouchmove="onRecMove"
       bindtouchcancel="onRecCancel"
       hover-class="none"
-    >{{recording ? '◉' : '🎙'}}</view>
+    >
+      <view class="mic-icon"></view>
+      <view wx:if="{{recording}}" class="mic-dot"></view>
+    </view>
     <input
       class="input"
       value="{{input}}"
@@ -63,9 +68,9 @@
 
   <view wx:if="{{recording}}" class="rec-overlay">
     <view class="rec-panel">
-      <view class="rec-icon">🎙</view>
-      <view class="rec-text">{{recSlideCancel ? '松开手指，取消发送' : (recLiveText ? recLiveText : '正在聆听… 松开发送')}}</view>
-      <view class="rec-hint">{{recSlideCancel ? '' : (recLiveText ? '（继续说吧，上滑取消）' : '（上滑取消）')}}</view>
+      <view class="rec-icon"><view class="rec-icon-mic"></view></view>
+      <view class="rec-text">{{recSlideCancel ? '松开手指，取消发送' : (recLiveText ? recLiveText : '正在聆听…')}}</view>
+      <view class="rec-hint">{{recSlideCancel ? '' : (recLiveText ? '继续说吧，上滑取消' : '上滑取消 · 松开发送')}}</view>
       <view class="rec-btns">
         <view class="rec-btn rec-btn-cancel" bindtap="onRecCancel">取消</view>
         <view class="rec-btn rec-btn-send" bindtap="onRecSendTap">完成</view>

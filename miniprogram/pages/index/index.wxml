@@ -5,12 +5,22 @@
     <view class="hero-sub">跨越千年，与先贤对坐倾谈</view>
   </view>
 
-  <view class="section-title">选择一位历史人物</view>
+  <view class="section-label">
+    <text class="section-label-text">选择一位历史人物</text>
+    <view class="section-label-line"></view>
+  </view>
 
-  <view wx:if="{{loading}}" class="tip">正在加载人物…</view>
-  <view wx:elif="{{error}}" class="tip error">{{error}}</view>
+  <view wx:if="{{loading}}" class="state">
+    <view class="state-spinner"></view>
+    <view class="state-text">正在加载人物…</view>
+  </view>
 
-  <view wx:else class="grid">
+  <view wx:elif="{{error}}" class="state">
+    <view class="state-error-icon">!</view>
+    <view class="state-text state-error">{{error}}</view>
+  </view>
+
+  <view wx:else class="list">
     <view
       wx:for="{{characters}}"
       wx:key="id"
@@ -19,16 +29,20 @@
       data-name="{{item.name}}"
       data-avatar="{{item.avatar}}"
       bindtap="onTapCharacter"
+      hover-class="card-hover"
+      hover-stay-time="80"
     >
       <image class="avatar" src="/images/avatars/{{item.avatar}}" mode="aspectFill"></image>
       <view class="card-body">
-        <view class="card-name">{{item.name}}</view>
+        <view class="card-row">
+          <view class="card-name">{{item.name}}</view>
+          <view class="card-arrow">›</view>
+        </view>
         <view class="card-era">{{item.dynasty}} · {{item.title}}</view>
         <view class="card-tagline">“{{item.tagline}}”</view>
       </view>
-      <view class="arrow">›</view>
     </view>
   </view>
 
-  <view class="footer">后端：Spring Boot（Java 21）· 部署：WSL k3s GitOps</view>
+  <view class="footer">Spring Boot · WSL k3s GitOps</view>
 </view>
